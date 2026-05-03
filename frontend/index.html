@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EC Price Predictor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f4f8; color: #1a202c; min-height: 100vh;
+    }
+    header {
+      background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%);
+      color: white; padding: 24px 32px;
+    }
+    header h1 { font-size: 1.6rem; font-weight: 700; }
+    header p  { opacity: .85; margin-top: 4px; font-size: .9rem; }
+    main { max-width: 860px; margin: 32px auto; padding: 0 16px; }
+
+    .card {
+      background: white; border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.12); padding: 28px; margin-bottom: 24px;
+    }
+    .card h2 { font-size: 1.1rem; color: #2d3748; margin-bottom: 20px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width:560px) { .grid { grid-template-columns: 1fr; } }
+
+    label { display: block; font-size: .82rem; font-weight: 600;
+            color: #4a5568; margin-bottom: 4px; }
+    input, select {
+      width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0;
+      border-radius: 8px; font-size: .9rem; outline: none;
+      transition: border-color .15s;
+    }
+    input:focus, select:focus { border-color: #3182ce; }
+
+    .hint { font-size: .76rem; color: #718096; margin-top: 3px; }
+
+    button#submitBtn {
+      width: 100%; margin-top: 8px; padding: 13px;
+      background: #2b6cb0; color: white; border: none;
+      border-radius: 8px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+    }
+    button#submitBtn:hover { background: #2c5282; }
+    button#submitBtn:disabled { background: #a0aec0; cursor: not-allowed; }
+
+    #results { display: none; }
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media(max-width:560px) { .result-grid { grid-template-columns: 1fr; } }
+
+    .result-box {
+      border-radius: 10px; padding: 20px; text-align: center;
+    }
+    .mop-box    { background: #ebf8ff; border: 2px solid #3182ce; }
+    .priv-box   { background: #f0fff4; border: 2px solid #38a169; }
+
+    .result-box .label { font-size: .78rem; font-weight: 700;
+                         text-transform: uppercase; letter-spacing: .05em; }
+    .mop-box  .label   { color: #2b6cb0; }
+    .priv-box .label   { color: #276749; }
+
+    .result-box .psf {
+      font-size: 2.2rem; font-weight: 800; margin: 6px 0 2px;
+      color: #1a202c;
+    }
+    .result-box .total { font-size: .9rem; color: #4a5568; }
+    .result-box .meta  {
+      margin-top: 12px; font-size: .75rem; color: #718096;
+      border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: left;
+    }
+    .result-box .meta span { display: block; }
+
+    .note { font-size: .8rem; color: #718096; margin-top: 12px; text-align: center; }
+    .error-box {
+      background: #fff5f5; border: 1.5px solid #fc8181;
+      border-radius: 8px; padding: 14px; color: #c53030; font-size: .9rem;
+    }
+
+    .spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,.4);
+      border-top-color: white; border-radius: 50%;
+      animation: spin .7s linear infinite; vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>EC Price Predictor</h1>
+  <p>Estimate Executive Condominium resale prices at 5-year MOP and 10-year privatisation</p>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Unit Details</h2>
+    <form id="predForm">
+      <div class="grid">
+
+        <div>
+          <label for="area_sqft">Floor Area (sqft)</label>
+          <input type="number" id="area_sqft" value="1076" min="300" max="4000" required />
+          <p class="hint">Typical EC: 800–1,400 sqft</p>
+        </div>
+
+        <div>
+          <label for="floor_level">Floor Level</label>
+          <input type="number" id="floor_level" value="8" min="1" max="50" required />
+          <p class="hint">Use mid-point of range (e.g. 8 for "06-10")</p>
+        </div>
+
+        <div>
+          <label for="district">District</label>
+          <select id="district">
+            <option value="19" selected>D19 – Serangoon / Hougang / Punggol</option>
+            <option value="27">D27 – Sembawang / Yishun</option>
+            <option value="23">D23 – Hillview / Choa Chu Kang</option>
+            <option value="28">D28 – Seletar / Yio Chu Kang</option>
+            <option value="18">D18 – Tampines / Pasir Ris</option>
+            <option value="25">D25 – Admiralty / Woodlands</option>
+            <option value="22">D22 – Jurong / Boon Lay</option>
+            <option value="20">D20 – Bishan / Ang Mo Kio</option>
+            <option value="16">D16 – Bedok / Upper East Coast</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="market_segment">Market Segment</label>
+          <select id="market_segment">
+            <option value="OCR" selected>OCR – Outside Central Region</option>
+            <option value="RCR">RCR – Rest of Central Region</option>
+            <option value="CCR">CCR – Core Central Region</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="lease_year">Lease Commencement Year</label>
+          <input type="number" id="lease_year" value="2019" min="1990" max="2030" required />
+        </div>
+
+        <div>
+          <label for="total_units">Total Units in Project</label>
+          <input type="number" id="total_units" value="820" min="1" max="3000" />
+          <p class="hint">Optional</p>
+        </div>
+
+        <div>
+          <label for="mrt_dist">Nearest MRT Distance (m)</label>
+          <input type="number" id="mrt_dist" value="450" min="0" max="5000" />
+          <p class="hint">Optional</p>
+        </div>
+
+        <div>
+          <label for="cbd_dist">Distance to CBD (m)</label>
+          <input type="number" id="cbd_dist" value="16000" min="0" max="50000" />
+          <p class="hint">Optional — Raffles Place as CBD</p>
+        </div>
+
+      </div>
+
+      <button type="submit" id="submitBtn" style="margin-top:20px">
+        Predict Prices
+      </button>
+    </form>
+  </div>
+
+  <div id="results" class="card">
+    <h2>Predicted Resale Prices</h2>
+    <div class="result-grid">
+      <div class="result-box mop-box">
+        <div class="label">5-Year MOP</div>
+        <div class="psf" id="mop_psf">—</div>
+        <div class="total" id="mop_total">—</div>
+        <div class="meta" id="mop_meta"></div>
+      </div>
+      <div class="result-box priv-box">
+        <div class="label">10-Year Privatisation</div>
+        <div class="psf" id="priv_psf">—</div>
+        <div class="total" id="priv_total">—</div>
+        <div class="meta" id="priv_meta"></div>
+      </div>
+    </div>
+    <p class="note">Estimates are indicative only and based on historical EC resale transactions.</p>
+  </div>
+
+  <div id="errorBox" class="error-box" style="display:none"></div>
+</main>
+
+<script>
+  // Auto-detect API base from current host (works both locally and on Railway)
+  const API = window.location.origin;
+
+  document.getElementById('predForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Predicting…';
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('errorBox').style.display = 'none';
+
+    const payload = {
+      area_sqft:               +document.getElementById('area_sqft').value,
+      floor_level:             +document.getElementById('floor_level').value,
+      district:                +document.getElementById('district').value,
+      market_segment:           document.getElementById('market_segment').value,
+      lease_commencement_year: +document.getElementById('lease_year').value,
+      total_units:             +document.getElementById('total_units').value || undefined,
+      nearest_mrt_dist_m:      +document.getElementById('mrt_dist').value || undefined,
+      cbd_dist_m:              +document.getElementById('cbd_dist').value || undefined,
+    };
+
+    try {
+      const res  = await fetch(`${API}/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.detail || 'Prediction failed');
+
+      const fmt = n => '$' + Math.round(n).toLocaleString();
+      const fmtPsf = n => '$' + n.toFixed(0) + ' psf';
+
+      document.getElementById('mop_psf').textContent   = fmtPsf(data.mop_5yr.psf);
+      document.getElementById('mop_total').textContent = `Est. total: ${fmt(data.mop_5yr.total_price_est)}`;
+      document.getElementById('mop_meta').innerHTML    = metaHtml(data.mop_5yr);
+
+      document.getElementById('priv_psf').textContent   = fmtPsf(data.privatisation_10yr.psf);
+      document.getElementById('priv_total').textContent = `Est. total: ${fmt(data.privatisation_10yr.total_price_est)}`;
+      document.getElementById('priv_meta').innerHTML    = metaHtml(data.privatisation_10yr);
+
+      document.getElementById('results').style.display = 'block';
+    } catch (err) {
+      const eb = document.getElementById('errorBox');
+      eb.textContent = err.message;
+      eb.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Predict Prices';
+    }
+  });
+
+  function metaHtml(m) {
+    return `<span>Model v${m.model_version}</span>
+            <span>RMSE: $${m.model_rmse} psf | MAPE: ${m.model_mape.toFixed(1)}% | R²: ${m.model_r2.toFixed(3)}</span>`;
+  }
+</script>
+</body>
+</html>

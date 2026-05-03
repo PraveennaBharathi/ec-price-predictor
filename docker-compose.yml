@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+
+  # ─── PostgreSQL ───────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ec_db
+      POSTGRES_USER:     ec_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ec_pass_dev}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ec_user -d ec_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ─── API + ML service ─────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL:    postgresql://ec_user:${POSTGRES_PASSWORD:-ec_pass_dev}@postgres:5432/ec_db
+      URA_ACCESS_KEY:  ${URA_ACCESS_KEY}
+      MODEL_DIR:       /app/models
+      ADMIN_TOKEN:     ${ADMIN_TOKEN:-admin-secret}
+      LOG_LEVEL:       INFO
+    ports:
+      - "8000:8000"
+    volumes:
+      - model_data:/app/models
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  model_data:
