@@ -22,8 +22,9 @@ RUN mkdir -p /app/models
 
 ENV MODEL_DIR=/app/models \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    PORT=8000
 
-EXPOSE 8000
+EXPOSE ${PORT}
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn api.main:app --host 0.0.0.0 --port ${PORT}

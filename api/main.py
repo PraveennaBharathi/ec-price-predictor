@@ -91,7 +91,7 @@ def startup():
     _auto_train_if_needed()
 
 
-def _wait_for_db(retries: int = 10):
+def _wait_for_db(retries: int = 30):
     dsn = os.environ.get("DATABASE_URL", "")
     for i in range(retries):
         try:
@@ -101,7 +101,7 @@ def _wait_for_db(retries: int = 10):
             return
         except Exception:
             log.warning("Waiting for DB … (%d/%d)", i + 1, retries)
-            time.sleep(3)
+            time.sleep(5)
     raise RuntimeError("Database not reachable after startup.")
 
 
