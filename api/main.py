@@ -5,6 +5,7 @@ EC Price Predictor — FastAPI application entry point.
 import logging
 import os
 import sys
+import threading
 import time
 
 import psycopg2
@@ -87,6 +88,12 @@ if os.path.isdir(_frontend):
 @app.on_event("startup")
 def startup():
     log.info("EC Price Predictor API starting …")
+    # Run heavy setup in background — keeps the server immediately responsive
+    # so Railway's healthcheck passes right away.
+    threading.Thread(target=_startup_bg, daemon=True).start()
+
+
+def _startup_bg():
     _wait_for_db()
     _auto_train_if_needed()
 
@@ -102,7 +109,7 @@ def _wait_for_db(retries: int = 30):
         except Exception:
             log.warning("Waiting for DB … (%d/%d)", i + 1, retries)
             time.sleep(5)
-    raise RuntimeError("Database not reachable after startup.")
+    log.error("Database not reachable after %d retries — startup aborted.", retries)
 
 
 def _auto_train_if_needed():
